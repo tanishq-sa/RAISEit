@@ -1,0 +1,205 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import AuthenticatedNavbar from '@/components/AuthenticatedNavbar';
+import Footer from '@/components/Footer';
+import { useAuth } from '@/context/AuthContext';
+import { getAuctions, getAuctionByCode } from '@/utils/mongodb';
+
+export default function JoinAuction() {
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
+  const [auctions, setAuctions] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [auctionCode, setAuctionCode] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    // Redirect if not authenticated
+    if (!isAuthenticated()) {
+      router.push('/login?redirect=/join-auction');
+      return;
+    }
+    
+    // Fetch auctions - only public ones
+    const fetchAuctions = async () => {
+      try {
+        const auctionsData = await getAuctions(true); // true = only public auctions
+        setAuctions(auctionsData);
+      } catch (err) {
+        console.error('Failed to fetch auctions:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAuctions();
+  }, [isAuthenticated, router]);
+  
+  const filteredAuctions = auctions.filter(auction => 
+    auction.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    auction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    auction.creatorName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleCodeSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!auctionCode) {
+      setError('Please enter an auction code');
+      return;
+    }
+    
+    try {
+      const auction = await getAuctionByCode(auctionCode);
+      
+      if (!auction) {
+        setError('Invalid auction code. Please try again.');
+        return;
+      }
+      
+      // Navigate to the auction page
+      router.push(`/auction/${auction._id}`);
+    } catch (err) {
+      setError('Failed to join auction. Please try again.');
+      console.error(err);
+    }
+  };
+
+  return (
+    <div>
+      <AuthenticatedNavbar />
+      
+      <div className="container mx-auto py-12 px-4">
+        <h1 className="text-3xl font-bold mb-8">Join an Auction</h1>
+        
+        {/* User Funds Display */}
+        {user && (
+          <div className="max-w-md mx-auto mb-6 bg-green-50 p-4 rounded-lg shadow border border-green-200">
+            <div className="flex justify-between items-center">
+              <span className="text-green-800 font-medium">Your Available Funds:</span>
+              <span className="text-green-700 font-bold text-xl">${user.funds}</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Auction Code Input */}
+        <div className="max-w-md mx-auto mb-12 bg-[#f3f4f6] p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4">Have an Auction Code?</h2>
+          <form onSubmit={handleCodeSubmit}>
+            {error && (
+              <div className="bg-[#fee2e2] text-[#b91c1c] p-3 rounded-md mb-4 text-sm">
+                {error}
+              </div>
+            )}
+            
+            <div className="mb-4">
+              <label htmlFor="auctionCode" className="block text-sm font-medium text-[#374151] mb-1">
+                Enter Auction Code
+              </label>
+              <input
+                id="auctionCode"
+                type="text"
+                className="input-field uppercase"
+                placeholder="Enter code (e.g. ABC123)"
+                value={auctionCode}
+                onChange={(e) => setAuctionCode(e.target.value.toUpperCase())}
+              />
+            </div>
+            
+            <button
+              type="submit"
+              className="primary-btn w-full"
+            >
+              Join Auction
+            </button>
+          </form>
+        </div>
+        
+        {/* Divider */}
+        <div className="flex items-center my-8">
+          <div className="flex-grow border-t border-[#e5e7eb]"></div>
+          <span className="mx-4 text-[#6b7280]">OR</span>
+          <div className="flex-grow border-t border-[#e5e7eb]"></div>
+        </div>
+        
+        <h2 className="text-2xl font-semibold mb-6">Browse Available Auctions</h2>
+        
+        {/* Search */}
+        <div className="mb-8 max-w-md">
+          <label htmlFor="search" className="block text-sm font-medium text-[#374151] mb-1">
+            Search Auctions
+          </label>
+          <input
+            id="search"
+            type="text"
+            className="input-field"
+            placeholder="Search by name, description, or creator"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        
+        {/* Auction List */}
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-[#6b7280]">Loading auctions...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAuctions.length > 0 ? (
+              filteredAuctions.map(auction => (
+                <div key={auction._id} className="border border-[#e5e7eb] rounded-lg overflow-hidden shadow-md">
+                  <div className="p-6">
+                    <h2 className="text-xl font-bold mb-2">{auction.name}</h2>
+                    <p className="text-[#6b7280] mb-4">{auction.description}</p>
+                    
+                    <div className="mb-4 text-sm">
+                      <p className="flex justify-between py-1 border-b border-[#f3f4f6]">
+                        <span className="text-[#6b7280]">Creator:</span>
+                        <span className="font-medium">{auction.creatorName}</span>
+                      </p>
+                      <p className="flex justify-between py-1 border-b border-[#f3f4f6]">
+                        <span className="text-[#6b7280]">Players:</span>
+                        <span className="font-medium">{auction.players?.length || 0}</span>
+                      </p>
+                      <p className="flex justify-between py-1 border-b border-[#f3f4f6]">
+                        <span className="text-[#6b7280]">Base Value:</span>
+                        <span className="font-medium">${auction.baseValue}</span>
+                      </p>
+                      <p className="flex justify-between py-1 border-b border-[#f3f4f6]">
+                        <span className="text-[#6b7280]">Bidder Budget:</span>
+                        <span className="font-medium">${auction.bidderBudget}</span>
+                      </p>
+                      <p className="flex justify-between py-1">
+                        <span className="text-[#6b7280]">Status:</span>
+                        <span className="font-medium text-[#047857]">{auction.status}</span>
+                      </p>
+                    </div>
+                    
+                    <Link
+                      href={`/auction/${auction._id}`}
+                      className="block w-full text-center primary-btn"
+                    >
+                      Join Auction
+                    </Link>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <p className="text-[#6b7280] text-lg">No auctions found matching your search.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      <Footer />
+    </div>
+  );
+} 

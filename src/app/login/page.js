@@ -1,0 +1,117 @@
+'use client';
+
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+
+
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const { login, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    // If user is already logged in, redirect to home
+    if (isAuthenticated()) {
+      router.push('/');
+    }
+  }, [isAuthenticated, router]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const result = await login(email, password);
+      
+      if (result.success) {
+        router.push('/');
+      } else {
+        setError(result.error || 'Failed to login');
+      }
+    } catch (err) {
+      setError('An error occurred during login');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-[#000000] min-h-screen flex flex-col">
+      <Navbar />
+      <main className="flex-1 flex items-center justify-center">
+        <div className="bg-[#1E1E1E] rounded-xl shadow-lg p-8 w-full max-w-md border border-[#222]">
+          <h1 className="text-2xl font-bold mb-6 text-center text-[#fff]">Login to RAISEit</h1>
+          
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label htmlFor="email" className="block text-sm font-medium text-[#d1d5db] mb-1">
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                className="input-field"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="mb-6">
+              <label htmlFor="password" className="block text-sm font-medium text-[#d1d5db] mb-1">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                className="input-field"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            
+            {error && (
+              <div className="mb-4 text-[#ef4444] text-sm">{error}</div>
+            )}
+            
+            <button
+              type="submit"
+              className="w-full py-2 px-4 bg-black text-white rounded-lg font-medium shadow hover:bg-grey-700 hover:shadow-lg hover:scale-105 transition-all"
+              disabled={loading}
+            >
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+          </form>
+          
+          <div className="mt-6 text-center">
+            <Link href="/forget-password" className="text-sm text-[#60a5fa] hover:underline">
+              Forgot Password?
+            </Link>
+          </div>
+          
+          <div className="mt-8 text-center">
+            <p className="text-[#9ca3af]">
+              Not Registered Yet?{' '}
+              <Link href="/signup" className="text-[#ffffff] hover:underline">
+                Sign Up
+              </Link>
+            </p>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+} 

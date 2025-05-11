@@ -1,26 +1,48 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #fff;
+  --foreground: #111;
+  --primary: #000;
+  --secondary: #fff;
+  --accent: #111;
+  --card-bg: #fff;
+  --card-border: #e5e7eb;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), sans-serif;
+}
+
+/* Auth Page Styling */
+.auth-page {
+  background-color: var(--background);
+  color: var(--foreground);
+  @apply min-h-screen flex items-center justify-center;
+}
+
+/* Buttons */
+.primary-btn {
+  @apply border border-[#000] bg-[#000] text-[#fff] py-2 px-6 rounded-lg font-semibold shadow hover:bg-[#222] hover:scale-105 transition-all;
+}
+
+.secondary-btn {
+  @apply bg-[#fff] text-[#000] border border-[#000] py-2 px-6 rounded-lg font-semibold shadow hover:bg-[#f3f4f6] hover:scale-105 transition-all;
+}
+
+/* Input Field Styling */
+.input-field {
+  @apply border border-gray-300 rounded-lg p-3 w-full bg-[#fff] text-[#111] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#000] focus:border-[#000] transition-all shadow-sm;
+}
+
+/* Card for Auth Pages */
+.auth-card {
+  @apply bg-[#fff] p-8 rounded-xl shadow-lg max-w-md w-full border border-[#e5e7eb];
+}
+
+/* Card General */
+.card {
+  @apply bg-[#fff] border border-[#e5e7eb] rounded-xl shadow p-6;
 }
