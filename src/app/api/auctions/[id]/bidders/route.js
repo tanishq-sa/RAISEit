@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
 import Auction from '@/models/Auction';
 import User from '@/models/User';
+import mongoose from 'mongoose';
 
 export async function GET(request, context) {
   try {

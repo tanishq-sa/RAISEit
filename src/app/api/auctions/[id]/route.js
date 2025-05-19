@@ -47,43 +47,12 @@ export async function PATCH(request, context) {
 }
 
 // DELETE /api/auctions/[id]
-export async function DELETE(request, context) {
+export async function DELETE(request, { params }) {
   try {
-    const { id } = await context.params;
-    
-    await connectToDatabase();
-
-    // Start a session for transaction
-    const session = await Auction.startSession();
-    
-    try {
-      await session.withTransaction(async () => {
-        // Delete all bids associated with this auction
-        const bidsResult = await Bid.deleteMany({ auctionId: id }).session(session);
-        console.log(`Deleted ${bidsResult.deletedCount} bids`);
-
-        // Delete the auction
-        const deletedAuction = await Auction.findByIdAndDelete(id).session(session);
-        
-        if (!deletedAuction) {
-          throw new Error('Auction not found');
-        }
-        
-        console.log('Successfully deleted auction:', id);
-      });
-    } finally {
-      await session.endSession();
-    }
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Auction and associated bids deleted successfully' 
-    });
+    const { id } = params;
+    await Auction.findByIdAndDelete(id);
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete auction:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error.message || 'Failed to delete auction' 
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete auction' }, { status: 500 });
   }
 } 

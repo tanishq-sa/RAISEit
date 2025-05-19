@@ -24,7 +24,10 @@ export async function PATCH(request, context) {
     const { id } = await context.params;
     const data = await request.json();
     
-    const user = await updateUser(id, data);
+    // Exclude sensitive fields
+    const { password, role, ...updateData } = data;
+    
+    const user = await updateUser(id, updateData);
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });

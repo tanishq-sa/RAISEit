@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import AuthenticatedNavbar from '@/components/AuthenticatedNavbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';

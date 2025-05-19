@@ -46,7 +46,7 @@ export default function ForgetPasswordPage() {
       } else {
         setError(data.error || "Failed to process request.");
       }
-    } catch {
+    } catch (err) {
       setError("Failed to process request.");
     } finally {
       setLoading(false);

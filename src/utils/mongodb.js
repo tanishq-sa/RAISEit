@@ -2,6 +2,7 @@
 // For this demo, we'll simulate MongoDB functionality
 
 import { connectToDatabase } from '@/lib/mongodb';
+import { ObjectId } from 'mongodb';
 import User from '@/models/User';
 import Auction from '@/models/Auction';
 import Bid from '@/models/Bid';
@@ -15,6 +16,16 @@ const db = {
   auctions: [],
   bids: [],
   users: []
+};
+
+// Generate a random ID
+const generateId = () => {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
+// Generate a random auction code (6 characters)
+const generateAuctionCode = () => {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
 };
 
 // Server-side wrapper function

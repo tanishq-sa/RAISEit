@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import AuthenticatedNavbar from "@/components/AuthenticatedNavbar";
 import Footer from "@/components/Footer";
-import Image from 'next/image';
 
 export default function MyTeamPage() {
   const { user, isAuthenticated } = useAuth();
@@ -40,7 +39,7 @@ export default function MyTeamPage() {
           }
         });
         setTeamByAuction(grouped);
-      } catch {
+      } catch (err) {
         setError("Failed to load your team");
       } finally {
         setLoading(false);
@@ -113,13 +112,7 @@ export default function MyTeamPage() {
                         {auction.players.map((player, idx) => (
                           <div key={player._id + '-' + idx} className="bg-gray-50 rounded-lg p-4 flex flex-col items-center border">
                             {player.image && (
-                              <Image
-                                src={player.image}
-                                alt={player.name}
-                                width={80}
-                                height={80}
-                                className="w-20 h-20 object-cover rounded-full mb-2"
-                              />
+                              <img src={player.image} alt={player.name} className="w-20 h-20 object-cover rounded-full mb-2" />
                             )}
                             <h2 className="text-lg font-semibold mb-1">{player.name}</h2>
                             <p className="text-gray-600 mb-1">Price: <span className="font-bold">${player.soldAmount}</span></p>

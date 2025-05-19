@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
 
 export default function JoinAuction() {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const [auctions, setAuctions] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
