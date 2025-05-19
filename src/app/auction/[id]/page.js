@@ -34,6 +34,8 @@ export default function AuctionPage() {
   const [hasSyncedFunds, setHasSyncedFunds] = useState(false);
   const prevPlayersWon = useRef(0);
   const [animatePlayersWon, setAnimatePlayersWon] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteCountdown, setDeleteCountdown] = useState(5);
 
   useEffect(() => {
     // Redirect if not authenticated, but only after loading is false
@@ -871,6 +873,26 @@ export default function AuctionPage() {
   const maxPlayers = auction?.maxPlayersPerTeam || 0;
   const canBid = !maxPlayers || playersWon < maxPlayers;
 
+  // Function to delete auction
+  const handleDeleteAuction = async () => {
+    setDeleting(true);
+    setDeleteCountdown(5);
+    let countdown = 5;
+    const interval = setInterval(() => {
+      countdown -= 1;
+      setDeleteCountdown(countdown);
+      if (countdown === 0) {
+        clearInterval(interval);
+        // Call DELETE API
+        fetch(`/api/auctions/${id}`, { method: 'DELETE' })
+          .then(res => res.json())
+          .then(() => {
+            router.push('/');
+          });
+      }
+    }, 1000);
+  };
+
   if (loading) {
     return (
       <div>
@@ -936,6 +958,7 @@ export default function AuctionPage() {
             <div>
               <h2 className="text-2xl font-bold mb-4">Auction Ended</h2>
               <h3 className="text-xl font-semibold mb-6">Teams</h3>
+
               {/* Teams grouped by winner name (soldToName) */}
               {(() => {
                 // Build a map: winner name -> array of players
@@ -946,6 +969,7 @@ export default function AuctionPage() {
                     if (!winnerMap[player.soldToName]) winnerMap[player.soldToName] = [];
                     winnerMap[player.soldToName].push(player);
                   });
+                  
                 const winnerNames = Object.keys(winnerMap);
                 return (
                   <div className="flex flex-col gap-8 items-center">
@@ -978,6 +1002,23 @@ export default function AuctionPage() {
                   </div>
                 );
               })()}
+                {/* Only admin/creator can see End Auction button */}
+                {user._id === auction.creatorId && (
+                <div className="mb-3 mt-10">
+                  {!deleting ? (
+                    <button
+                      onClick={handleDeleteAuction}
+                      className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold"
+                    >
+                      End Auction (Delete)
+                    </button>
+                  ) : (
+                    <div className="text-red-600 font-semibold text-lg">
+                      Auction will be deleted in {deleteCountdown} second{deleteCountdown !== 1 ? 's' : ''}...
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Unsold Players Section */}
               <div className="mt-12">
                 <h3 className="text-lg font-semibold mb-2">Unsold Players</h3>

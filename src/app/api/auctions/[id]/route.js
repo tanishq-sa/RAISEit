@@ -47,9 +47,9 @@ export async function PATCH(request, context) {
 }
 
 // DELETE /api/auctions/[id]
-export async function DELETE(request, { params }) {
+export async function DELETE(request, context) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
     await Auction.findByIdAndDelete(id);
     return NextResponse.json({ success: true });
   } catch (error) {
