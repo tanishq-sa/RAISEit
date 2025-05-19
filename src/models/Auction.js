@@ -82,11 +82,12 @@ const AuctionSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  bidders: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   createdAt: {
     type: Date,
     default: Date.now
   }
-});
+}, { timestamps: true });
 
 // Use this check to prevent model redefinition errors in development
 export default mongoose.models.Auction || mongoose.model('Auction', AuctionSchema); 

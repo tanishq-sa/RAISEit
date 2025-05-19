@@ -1,10 +1,19 @@
-import { Inter } from "next/font/google";
+import { Turret_Road } from 'next/font/google';
+import localFont from 'next/font/local';
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 
-const inter = Inter({
+const turretRoad = Turret_Road({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ["200", "300", "400", "500", "700", "800"],
+  display: "swap",
+});
+
+const truck = localFont({
+  src: [
+    {path: '../../public/fonts/TRUCKMACHINE.otf'},
+  ],
+  variable: '--font-truck',
 });
 
 export const metadata = {
@@ -14,8 +23,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} font-sans antialiased`}>
+    <html lang="en" className={turretRoad.className}>
+      <body className={`${truck.variable} antialiased`}>
         <AuthProvider>
           {children}
         </AuthProvider>

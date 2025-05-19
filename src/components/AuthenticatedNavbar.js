@@ -12,8 +12,20 @@ export default function AuthenticatedNavbar() {
     <nav className="bg-[#000000] py-4 px-6 md:px-12 shadow-sm">
       <div className="container mx-auto flex justify-between items-center">
         {/* Logo */}
-        <Link href="/" className="text-2xl font-bold text-[#ffffff]">
-          <span className="font-bold tracking-wider">RAISE<span className="lowercase">it</span></span>
+        <Link href="/" className="text-2xl text-[#ffffff] font-bold">
+          <span
+            className="tracking-tighter uppercase"
+            style={{
+              fontFamily: "'Truck Machine', sans-serif",
+              // fontWeight: 1000,
+              letterSpacing: '0.02em',
+              fontSize: '2.3rem',
+              lineHeight: 1.1,
+              display: 'inline-block'
+            }}
+          >
+            RAISE<span style={{ textTransform: 'lowercase', marginLeft: '0.03em', fontWeight: 700 }}>it</span>
+          </span>
         </Link>
 
         {/* Mobile menu button */}

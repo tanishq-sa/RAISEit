@@ -96,7 +96,7 @@ export default function JoinAuction() {
                 id="auctionCode"
                 value={auctionCode}
                 onChange={(e) => setAuctionCode(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="input-field"
                 placeholder="Enter the auction code"
               />
             </div>
@@ -134,7 +134,7 @@ export default function JoinAuction() {
                   <p className="text-sm text-gray-500">Created by: {auction.creatorName}</p>
                   <Link
                     href={`/auction/${auction._id}`}
-                    className="mt-4 inline-block bg-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-700"
+                    className="mt-4 inline-block primary-btn"
                   >
                     View Auction
                   </Link>

@@ -8,7 +8,19 @@ export default function Footer() {
           {/* Logo */}
           <div className="mb-4 md:mb-0">
             <Link href="/" className="text-xl font-bold text-[#ffffff]">
-              <span className="font-bold tracking-wider">RAISE<span className="lowercase">it</span></span>
+              <span
+                className="tracking-tighter uppercase"
+                style={{
+                  fontFamily: "'Truck Machine', sans-serif",
+                  // fontWeight: 1000,
+                  letterSpacing: '0.02em',
+                  fontSize: '2.3rem',
+                  lineHeight: 1.1,
+                  display: 'inline-block'
+                }}
+              >
+                RAISE<span style={{ textTransform: 'lowercase', marginLeft: '0.03em', fontWeight: 700 }}>it</span>
+              </span>
             </Link>
           </div>
           

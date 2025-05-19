@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Truck Machine';
+  src: url('/fonts/TRUCKMACHINE.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   --background: #fff;
   --foreground: #111;

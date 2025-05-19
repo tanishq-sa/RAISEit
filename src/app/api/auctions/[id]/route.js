@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import Auction from '@/models/Auction';
+import Bid from '@/models/Bid';
 
 // GET /api/auctions/[id]
 export async function GET(request, context) {
@@ -51,15 +52,38 @@ export async function DELETE(request, context) {
     const { id } = await context.params;
     
     await connectToDatabase();
-    const auction = await Auction.findByIdAndDelete(id);
+
+    // Start a session for transaction
+    const session = await Auction.startSession();
     
-    if (!auction) {
-      return NextResponse.json({ success: false, error: 'Auction not found' }, { status: 404 });
+    try {
+      await session.withTransaction(async () => {
+        // Delete all bids associated with this auction
+        const bidsResult = await Bid.deleteMany({ auctionId: id }).session(session);
+        console.log(`Deleted ${bidsResult.deletedCount} bids`);
+
+        // Delete the auction
+        const deletedAuction = await Auction.findByIdAndDelete(id).session(session);
+        
+        if (!deletedAuction) {
+          throw new Error('Auction not found');
+        }
+        
+        console.log('Successfully deleted auction:', id);
+      });
+    } finally {
+      await session.endSession();
     }
     
-    return NextResponse.json({ success: true, message: 'Auction deleted successfully' });
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Auction and associated bids deleted successfully' 
+    });
   } catch (error) {
     console.error('Failed to delete auction:', error);
-    return NextResponse.json({ success: false, error: 'Failed to delete auction' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message || 'Failed to delete auction' 
+    }, { status: 500 });
   }
 } 

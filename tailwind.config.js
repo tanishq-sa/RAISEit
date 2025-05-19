@@ -32,6 +32,9 @@ module.exports = {
           600: '#16a34a',
         },
       },
+      fontFamily: {
+        truck: ['var(--font-truck)'],
+      },
     },
   },
   plugins: [],
