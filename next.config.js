@@ -16,7 +16,15 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['mongoose', 'mongodb'],
     turbo: false
-  }
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
 };
 
 module.exports = nextConfig; 

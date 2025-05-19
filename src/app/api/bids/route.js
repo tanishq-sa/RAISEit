@@ -3,7 +3,6 @@ import { connectToDatabase } from '@/lib/mongodb';
 import Bid from '@/models/Bid';
 import { getUserById } from '@/utils/mongodb';
 import Auction from '@/models/Auction';
-import User from '@/models/User';
 
 // GET /api/bids - Get bids with optional filtering
 export async function GET(request) {

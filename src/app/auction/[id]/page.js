@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AuthenticatedNavbar from '@/components/AuthenticatedNavbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
+import Image from 'next/image';
 
 export default function AuctionPage() {
   const params = useParams();
@@ -19,14 +20,12 @@ export default function AuctionPage() {
   const [bidError, setBidError] = useState('');
   const [bidSuccess, setBidSuccess] = useState('');
   const [bids, setBids] = useState([]);
-  const [bidHistory, setBidHistory] = useState([]);
   const [bidding, setBidding] = useState(false);
-  const [budgetAmount, setBudgetAmount] = useState('');
-  const [visibilityStatus, setVisibilityStatus] = useState(true);
+  const [setBudgetAmount] = useState('');
+  const [setVisibilityStatus] = useState(true);
   const [auctionEnded, setAuctionEnded] = useState(false);
   const [auctionStarted, setAuctionStarted] = useState(false);
   const [countdown, setCountdown] = useState(null);
-  const [lastUpdate, setLastUpdate] = useState(Date.now());
   // Timer state
   const [timer, setTimer] = useState(15);
   const [lastHighestBid, setLastHighestBid] = useState(null);
@@ -99,7 +98,7 @@ export default function AuctionPage() {
     };
 
     fetchAuction();
-  }, [id, isAuthenticated, router, loading]);
+  }, [id, isAuthenticated, router, loading, setBudgetAmount, setVisibilityStatus]);
 
   // Timer effect: reset on player change, count down every second
   useEffect(() => {
@@ -126,7 +125,7 @@ export default function AuctionPage() {
           setLastHighestBid(highestBid._id);
           setTimer(15); // Reset timer to 15s for all users
         }
-      } catch (err) {
+      } catch {
         // ignore
       }
       setTimeout(poll, 1000);
@@ -153,7 +152,7 @@ export default function AuctionPage() {
       }, 1000); // 1 second delay before advancing
       return () => clearTimeout(timeout);
     }
-  }, [timer, user?._id, auction?.creatorId, currentPlayerIndex, auction?.players?.length, auctionEnded, auctionStarted]);
+  }, [timer, user?._id, auction?.creatorId, currentPlayerIndex, auction?.players?.length, auctionEnded, auctionStarted, auction, finalizePlayer, nextPlayer, user]);
 
   // Poll for auction updates
   useEffect(() => {
@@ -246,7 +245,7 @@ export default function AuctionPage() {
   }, [id, user?._id, auction?.creatorId]);
 
   // Function to move to the next player
-  const nextPlayer = async () => {
+  const nextPlayer = useCallback(async () => {
     if (!auction || !auction.players) return;
     if (currentPlayerIndex < auction.players.length - 1) {
       const nextIndex = currentPlayerIndex + 1;
@@ -279,12 +278,11 @@ export default function AuctionPage() {
           const userData = await userRes.json();
           if (userData && !userData.error) setUser(userData);
         }
-      } catch (err) {
+      } catch {
         setError('Failed to move to next player');
-        console.error(err);
       }
     }
-  };
+  }, [auction, currentPlayerIndex, id, setUser, user]);
 
   // Function to go back to the previous player
   const previousPlayer = async () => {
@@ -497,7 +495,7 @@ export default function AuctionPage() {
   };
 
   // Function to finalize a player (mark as sold to highest bidder)
-  const finalizePlayer = async () => {
+  const finalizePlayer = useCallback(async () => {
     if (!auction?.players) return;
     try {
       const currentPlayer = auction.players[currentPlayerIndex];
@@ -622,100 +620,8 @@ export default function AuctionPage() {
       setError('Failed to finalize player');
       console.error('[finalizePlayer] Error:', err);
     }
-  };
+  }, [auction, currentPlayerIndex, id, setUser, user, nextPlayer, addPlayer]);
   
-  // Function to set bidder budget
-  const handleSetBudget = async () => {
-    if (!auction || !isAdmin()) return;
-    
-    try {
-      const budget = parseFloat(budgetAmount);
-      
-      if (isNaN(budget) || budget <= 0) {
-        setError('Please enter a valid budget amount');
-        return;
-      }
-      
-      const response = await fetch(`/api/auctions/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ bidderBudget: budget })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update bidder budget');
-      }
-      
-      setAuction({
-        ...auction,
-        bidderBudget: budget
-      });
-      
-      setBidSuccess(`Bidder budget set to $${budget}`);
-    } catch (err) {
-      setError('Failed to set bidder budget');
-      console.error(err);
-    }
-  };
-  
-  // Function to toggle auction visibility
-  const toggleVisibility = async () => {
-    if (!auction || !isAdmin()) return;
-    
-    try {
-      const newVisibility = !visibilityStatus;
-      
-      const response = await fetch(`/api/auctions/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ isPublic: newVisibility })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update auction visibility');
-      }
-      
-      setVisibilityStatus(newVisibility);
-      setAuction({
-        ...auction,
-        isPublic: newVisibility
-      });
-      
-      setBidSuccess(`Auction is now ${newVisibility ? 'public' : 'private'}`);
-    } catch (err) {
-      setError('Failed to toggle visibility');
-      console.error(err);
-    }
-  };
-  
-  // Function to set budget for a specific bidder
-  const setBidderBudgetForUser = async (userId, budget) => {
-    if (!auction || !isAdmin()) return;
-    
-    try {
-      const response = await fetch(`/api/users/${userId}/funds`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ funds: budget })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update bidder budget');
-      }
-      
-      setBidSuccess(`Updated budget for user successfully`);
-    } catch (err) {
-      setError('Failed to set budget for user');
-      console.error(err);
-    }
-  };
-
   // Function to start the auction
   const startAuction = async () => {
     if (!auction || !isAdmin()) return;
@@ -818,7 +724,7 @@ export default function AuctionPage() {
 
   // Show balance for bidders only (not creator)
   let showBalance = false;
-  let userBalance = 0;
+  // let  userBalance = 0;
   if (auction && user) {
     showBalance = isBidder() && user._id !== auction.creatorId;
     userBalance = user.funds || 0;
@@ -897,7 +803,7 @@ export default function AuctionPage() {
     return null;
   }
 
-  const currentPlayer = auction.players?.[currentPlayerIndex];
+  // const currentPlayer = auction.players?.[currentPlayerIndex];
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-between">
@@ -1073,9 +979,11 @@ export default function AuctionPage() {
                     <div>
                       {auction.players[currentPlayerIndex].image && (
                         <div className="flex justify-center mb-4">
-                          <img 
-                            src={auction.players[currentPlayerIndex].image} 
+                          <Image
+                            src={auction.players[currentPlayerIndex].image}
                             alt={auction.players[currentPlayerIndex].name}
+                            width={80}
+                            height={80}
                             className="w-32 h-32 object-cover rounded-full border-4 border-indigo-200"
                           />
                         </div>

@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getUserByEmail, updateUser } from '@/utils/mongodb';
 import User from '@/models/User';
 import connectToDatabase from '@/lib/mongodb';
-import bcrypt from 'bcryptjs';
 
 // POST /api/reset-password
 export async function POST(request) {

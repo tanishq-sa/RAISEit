@@ -31,7 +31,7 @@ function ResendVerificationButton({ email }) {
         setError(data.error || 'Failed to resend verification email.');
         if (res.status === 429) setDisabled(true);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to resend verification email.');
     } finally {
       setLoading(false);
@@ -81,9 +81,8 @@ export default function Login() {
       } else {
         setError(result.error || 'Failed to login');
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred during login');
-      console.error(err);
     } finally {
       setLoading(false);
     }
