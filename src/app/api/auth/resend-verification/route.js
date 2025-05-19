@@ -32,7 +32,7 @@ export async function POST(request) {
     user.lastVerificationEmailSent = now;
     await user.save();
     // Send verification email
-    const verifyUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/verify?token=${verificationToken}`;
+    const verifyUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/auth/verify?token=${verificationToken}`;
     const html = `
       <h2>Verify your email</h2>
       <p>Click the link below to verify your email address:</p>

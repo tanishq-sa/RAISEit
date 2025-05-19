@@ -6,7 +6,7 @@ import { sendMail } from '@/utils/sendMail';
 
 // Helper to send email (pseudo, replace with real nodemailer logic)
 async function sendVerificationEmail(email, token) {
-  const verifyUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/auth/verify?token=${token}`;
+  const verifyUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/auth/verify?token=${token}`;
   const html = `
     <h2>Verify your email</h2>
     <p>Click the link below to verify your email address:</p>
