@@ -2,6 +2,7 @@ import { Turret_Road } from 'next/font/google';
 import localFont from 'next/font/local';
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const turretRoad = Turret_Road({
   subsets: ["latin"],
@@ -27,6 +28,7 @@ export default function RootLayout({ children }) {
       <body className={`${truck.variable} antialiased`}>
         <AuthProvider>
           {children}
+          <SpeedInsights />
         </AuthProvider>
       </body>
     </html>
