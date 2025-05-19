@@ -70,7 +70,6 @@ export default function CreateAuction() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
     try {
       // Validate data
       if (!auctionData.name || !auctionData.description || !auctionData.baseValue) {
@@ -78,14 +77,12 @@ export default function CreateAuction() {
         setLoading(false);
         return;
       }
-      
       // Check if all players have names
       if (auctionData.players.some(player => !player.name)) {
         setError('All players must have names');
         setLoading(false);
         return;
       }
-
       // Add creator ID to auction data
       const auctionWithCreator = {
         ...auctionData,
@@ -100,7 +97,6 @@ export default function CreateAuction() {
           status: 'pending'
         }))
       };
-      
       // Create auction using API endpoint instead of direct MongoDB access
       const response = await fetch('/api/auctions', {
         method: 'POST',
@@ -109,13 +105,12 @@ export default function CreateAuction() {
         },
         body: JSON.stringify(auctionWithCreator),
       });
-
       const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create auction');
+        setError(data.error || 'Failed to create auction. Please try again.');
+        setLoading(false);
+        return;
       }
-      
       setCreatedAuction(data.auction);
       setSuccess(true);
     } catch (err) {

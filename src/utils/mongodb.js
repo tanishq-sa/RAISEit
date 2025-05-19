@@ -245,7 +245,10 @@ export const authenticateUser = async (email, password) => {
       if (!user) {
         return { success: false, message: 'User not found' };
       }
-      
+      // Block login if not verified
+      if (!user.verified) {
+        return { success: false, message: 'Email not verified. Please check your inbox.' };
+      }
       // Verify password
       const isMatch = await user.comparePassword(password);
       if (!isMatch) {

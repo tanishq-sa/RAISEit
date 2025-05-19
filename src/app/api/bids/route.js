@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import Bid from '@/models/Bid';
+import { getUserById } from '@/utils/mongodb';
+import Auction from '@/models/Auction';
+import User from '@/models/User';
 
 // GET /api/bids - Get bids with optional filtering
 export async function GET(request) {
@@ -51,7 +54,35 @@ export async function POST(request) {
       }
     }
     
+    // Check if user is verified
+    const user = await getUserById(bidData.userId);
+    if (!user || !user.verified) {
+      return NextResponse.json(
+        { success: false, error: 'Email not verified. Please verify your email to place a bid.' },
+        { status: 403 }
+      );
+    }
+    
     await connectToDatabase();
+    
+    // Fetch the auction
+    const auction = await Auction.findById(bidData.auctionId);
+    if (!auction) {
+      return NextResponse.json({ success: false, error: 'Auction not found.' }, { status: 404 });
+    }
+
+    // Check max players per team
+    const maxPlayers = auction.maxPlayersPerTeam;
+    if (maxPlayers) {
+      // Count players won by this user in this auction
+      const playersWon = auction.players.filter(p => p.soldTo === bidData.userId).length;
+      if (playersWon >= maxPlayers) {
+        return NextResponse.json({
+          success: false,
+          error: `You have reached the maximum of ${maxPlayers} players for your team in this auction.`,
+        }, { status: 403 });
+      }
+    }
     
     // Create the bid
     const newBid = new Bid(bidData);

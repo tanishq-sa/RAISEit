@@ -13,6 +13,7 @@
     "bcryptjs": "^3.0.2",
     "mongoose": "^8.14.2",
     "next": "15.3.2",
+    "nodemailer": "^7.0.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

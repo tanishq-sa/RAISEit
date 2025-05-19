@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import Auction from '@/models/Auction';
+import { getUserById } from '@/utils/mongodb';
 
 // Generate a random auction code (6 characters)
 const generateAuctionCode = () => {
@@ -42,6 +43,15 @@ export async function POST(request) {
           { status: 400 }
         );
       }
+    }
+    
+    // Check if user is verified
+    const user = await getUserById(auctionData.creatorId);
+    if (!user || !user.verified) {
+      return NextResponse.json(
+        { success: false, error: 'Email not verified. Please verify your email to create an auction.' },
+        { status: 403 }
+      );
     }
     
     await connectToDatabase();

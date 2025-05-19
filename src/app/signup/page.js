@@ -14,6 +14,7 @@ export default function Signup() {
   const [retypePassword, setRetypePassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
   const router = useRouter();
   const { signup, isAuthenticated } = useAuth();
 
@@ -24,10 +25,22 @@ export default function Signup() {
     }
   }, [isAuthenticated, router]);
 
+  function isValidEmail(email) {
+    // Simple regex for email validation
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  // Live email validation
+  const emailError = emailTouched && email && !isValidEmail(email) ? 'Please enter a valid email address!' : '';
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+    // Validate email format
+    if (!isValidEmail(email)) {
+      setError('Please enter a valid email address!');
+      return;
+    }
     // Validate passwords match
     if (password !== retypePassword) {
       setError('Passwords do not match!');
@@ -86,8 +99,10 @@ export default function Signup() {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => setEmailTouched(true)}
                 required
               />
+              {emailError && <div className="text-[#ef4444] text-xs mt-1">{emailError}</div>}
             </div>
             
             <div className="mb-4">
@@ -127,7 +142,7 @@ export default function Signup() {
             <button
               type="submit"
               className="w-full py-2 px-4 bg-black text-white rounded-lg font-medium shadow hover:bg-grey-700 hover:shadow-lg hover:scale-105 transition-all"
-              disabled={loading}
+              disabled={loading || !!emailError}
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>

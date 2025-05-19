@@ -7,6 +7,51 @@ import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
+function ResendVerificationButton({ email }) {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [disabled, setDisabled] = useState(false);
+
+  const handleResend = async () => {
+    setLoading(true);
+    setMessage('');
+    setError('');
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMessage(data.message);
+        setDisabled(true);
+      } else {
+        setError(data.error || 'Failed to resend verification email.');
+        if (res.status === 429) setDisabled(true);
+      }
+    } catch (err) {
+      setError('Failed to resend verification email.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="my-4">
+      <button
+        onClick={handleResend}
+        disabled={loading || disabled}
+        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+      >
+        {loading ? 'Sending...' : 'Resend Verification Email'}
+      </button>
+      {message && <div className="text-green-600 mt-2">{message}</div>}
+      {error && <div className="text-red-500 mt-2">{error}</div>}
+    </div>
+  );
+}
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -84,6 +129,13 @@ export default function Login() {
             
             {error && (
               <div className="mb-4 text-[#ef4444] text-sm">{error}</div>
+            )}
+            
+            {/* Show resend button if error is about verification and email is entered */}
+            {error && (
+              (error.toLowerCase().includes('verify your email') || error.toLowerCase().includes('email not verified')) && email
+            ) && (
+              <ResendVerificationButton email={email} />
             )}
             
             <button

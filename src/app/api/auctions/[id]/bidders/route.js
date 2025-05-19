@@ -56,8 +56,8 @@ export async function POST(request, context) {
 
     if (!alreadyBidder) {
       // Set user's funds to the auction's bidderBudget only if joining for the first time
-      user.funds = auction.bidderBudget;
-      await user.save();
+    user.funds = auction.bidderBudget;
+    await user.save();
 
       auction.bidders.push(user._id);
       await auction.save();

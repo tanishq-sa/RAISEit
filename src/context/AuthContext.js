@@ -107,6 +107,7 @@ export function AuthProvider({ children }) {
   const updateFunds = async (newFunds) => {
     if (user && user._id) {
       try {
+        console.log('[AuthContext updateFunds] Attempting to update funds', { userId: user._id, newFunds });
         const response = await fetch(`/api/users/${user._id}/funds`, {
           method: 'PATCH',
           headers: {
@@ -114,17 +115,17 @@ export function AuthProvider({ children }) {
           },
           body: JSON.stringify({ funds: newFunds })
         });
-        
         const updatedUser = await response.json();
-        
         if (response.ok && !updatedUser.error) {
           setUser(updatedUser);
           localStorage.setItem('user', JSON.stringify(updatedUser));
+          console.log('[AuthContext updateFunds] Success', updatedUser);
           return true;
         }
+        console.error('[AuthContext updateFunds] Failed to update funds:', updatedUser.error);
         return false;
       } catch (error) {
-        console.error('Failed to update funds:', error);
+        console.error('[AuthContext updateFunds] Exception:', error);
         return false;
       }
     }
@@ -137,7 +138,7 @@ export function AuthProvider({ children }) {
       const updatedUser = { ...user, players: updatedPlayers };
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
-      
+      console.log('[AuthContext addPlayer] Added player to user', player);
       // Optionally update on server
       if (user._id) {
         fetch(`/api/users/${user._id}/players`, {
@@ -146,7 +147,9 @@ export function AuthProvider({ children }) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ player })
-        }).catch(err => console.error('Failed to update player on server:', err));
+        }).then(() => {
+          console.log('[AuthContext addPlayer] Player update sent to server');
+        }).catch(err => console.error('[AuthContext addPlayer] Failed to update player on server:', err));
       }
     }
   };
@@ -154,6 +157,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{ 
       user, 
+      setUser,
       loading, 
       login, 
       signup, 

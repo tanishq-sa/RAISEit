@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import AuthenticatedNavbar from '@/components/AuthenticatedNavbar';
 import Footer from '@/components/Footer';
@@ -9,11 +9,10 @@ import { useAuth } from '@/context/AuthContext';
 export default function AuctionPage() {
   const params = useParams();
   const id = params.id;
-  const { user, isAuthenticated, isAdmin, isBidder, updateFunds, addPlayer } = useAuth();
+  const { user, setUser, isAuthenticated, isAdmin, isBidder, updateFunds, addPlayer, loading } = useAuth();
   const router = useRouter();
   
   const [auction, setAuction] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [bidAmount, setBidAmount] = useState('');
@@ -33,24 +32,27 @@ export default function AuctionPage() {
   const [lastHighestBid, setLastHighestBid] = useState(null);
   const [bidders, setBidders] = useState([]);
   const [hasSyncedFunds, setHasSyncedFunds] = useState(false);
+  const prevPlayersWon = useRef(0);
+  const [animatePlayersWon, setAnimatePlayersWon] = useState(false);
 
   useEffect(() => {
-    // Redirect if not authenticated
-    if (!isAuthenticated()) {
+    // Redirect if not authenticated, but only after loading is false
+    if (!loading && !isAuthenticated()) {
       router.push('/login?redirect=/auction/' + id);
       return;
     }
 
     // Fetch auction data
     const fetchAuction = async () => {
-      setLoading(true);
       try {
         // Use fetch API instead of direct MongoDB utils
         const response = await fetch(`/api/auctions/${id}`);
         const data = await response.json();
+        console.log('[AuctionPage fetchAuction]', { responseStatus: response.status, data });
         
         if (!response.ok || !data.auction) {
           setError('Auction not found');
+          console.error('[AuctionPage fetchAuction] Auction not found', { responseStatus: response.status, data });
           return;
         }
         
@@ -92,14 +94,12 @@ export default function AuctionPage() {
         }
       } catch (err) {
         setError('Failed to load auction data');
-        console.error('Error fetching auction:', err);
-      } finally {
-        setLoading(false);
+        console.error('[AuctionPage fetchAuction] Error:', err);
       }
     };
 
     fetchAuction();
-  }, [id, isAuthenticated, router]);
+  }, [id, isAuthenticated, router, loading]);
 
   // Timer effect: reset on player change, count down every second
   useEffect(() => {
@@ -146,7 +146,9 @@ export default function AuctionPage() {
       !auctionEnded &&
       auctionStarted
     ) {
-      const timeout = setTimeout(() => {
+      const timeout = setTimeout(async () => {
+        // Finalize current player before moving to next
+        await finalizePlayer();
         nextPlayer();
       }, 1000); // 1 second delay before advancing
       return () => clearTimeout(timeout);
@@ -230,10 +232,14 @@ export default function AuctionPage() {
         const res = await fetch(`/api/auctions/${id}/bidders`);
         const data = await res.json();
         if (res.ok && data.bidders) {
-          setBidders(data.bidders);
+          // Ensure unique bidders by using a Map
+          const uniqueBidders = Array.from(
+            new Map(data.bidders.map(bidder => [bidder._id, bidder])).values()
+          );
+          setBidders(uniqueBidders);
         }
       } catch (err) {
-        // Optionally handle error
+        console.error('Error fetching bidders:', err);
       }
     }, 1000);
     return () => clearInterval(interval);
@@ -242,10 +248,8 @@ export default function AuctionPage() {
   // Function to move to the next player
   const nextPlayer = async () => {
     if (!auction || !auction.players) return;
-    
     if (currentPlayerIndex < auction.players.length - 1) {
       const nextIndex = currentPlayerIndex + 1;
-      
       try {
         const response = await fetch(`/api/auctions/${id}`, {
           method: 'PATCH',
@@ -254,27 +258,27 @@ export default function AuctionPage() {
           },
           body: JSON.stringify({ currentPlayerIndex: nextIndex })
         });
-        
         if (!response.ok) {
           throw new Error('Failed to update auction');
         }
-        
-        // Reset bid amount to the base price of the next player
         const nextPlayer = auction.players[nextIndex];
         setBidAmount(nextPlayer.basePrice || auction.baseValue);
-        
-        // Clear bid messages
         setBidError('');
         setBidSuccess('');
-        
-        // Update the auction object
-        setAuction({
-          ...auction,
-          currentPlayerIndex: nextIndex
-        });
-        
+        setAuction({ ...auction, currentPlayerIndex: nextIndex });
         setCurrentPlayerIndex(nextIndex);
-        setTimer(15); // Reset timer
+        setTimer(15);
+        // Immediately fetch latest auction and user data
+        const auctionRes = await fetch(`/api/auctions/${id}`);
+        if (auctionRes.ok) {
+          const auctionData = await auctionRes.json();
+          setAuction(auctionData.auction);
+        }
+        const userRes = await fetch(`/api/users/${user._id}`);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          if (userData && !userData.error) setUser(userData);
+        }
       } catch (err) {
         setError('Failed to move to next player');
         console.error(err);
@@ -285,10 +289,8 @@ export default function AuctionPage() {
   // Function to go back to the previous player
   const previousPlayer = async () => {
     if (!auction || !auction.players) return;
-    
     if (currentPlayerIndex > 0) {
       const prevIndex = currentPlayerIndex - 1;
-      
       try {
         const response = await fetch(`/api/auctions/${id}`, {
           method: 'PATCH',
@@ -297,27 +299,27 @@ export default function AuctionPage() {
           },
           body: JSON.stringify({ currentPlayerIndex: prevIndex })
         });
-        
         if (!response.ok) {
           throw new Error('Failed to update auction');
         }
-        
-        // Reset bid amount to the base price of the previous player
         const prevPlayer = auction.players[prevIndex];
         setBidAmount(prevPlayer.basePrice || auction.baseValue);
-        
-        // Clear bid messages
         setBidError('');
         setBidSuccess('');
-        
-        // Update the auction object
-        setAuction({
-          ...auction,
-          currentPlayerIndex: prevIndex
-        });
-        
+        setAuction({ ...auction, currentPlayerIndex: prevIndex });
         setCurrentPlayerIndex(prevIndex);
-        setTimer(15); // Reset timer
+        setTimer(15);
+        // Immediately fetch latest auction and user data
+        const auctionRes = await fetch(`/api/auctions/${id}`);
+        if (auctionRes.ok) {
+          const auctionData = await auctionRes.json();
+          setAuction(auctionData.auction);
+        }
+        const userRes = await fetch(`/api/users/${user._id}`);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          if (userData && !userData.error) setUser(userData);
+        }
       } catch (err) {
         setError('Failed to move to previous player');
         console.error(err);
@@ -325,14 +327,82 @@ export default function AuctionPage() {
     }
   };
 
+  // Poll for user updates (funds and players)
+  useEffect(() => {
+    if (!user?._id) return;
+    
+    const pollUserData = async () => {
+      try {
+        const response = await fetch(`/api/users/${user._id}`);
+        if (response.ok) {
+          const userData = await response.json();
+          if (userData && !userData.error) {
+            // Update local user state
+            setUser(userData);
+            // Update funds in AuthContext
+            if (typeof updateFunds === 'function') {
+              await updateFunds(userData.funds);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error polling user data:', err);
+      }
+    };
+
+    const interval = setInterval(pollUserData, 2000); // Poll every 2 seconds
+    return () => clearInterval(interval);
+  }, [user?._id, updateFunds]);
+
+  // Calculate how many players the user has won in this auction
+  const playersWon = auction?.players
+    ? auction.players.filter(p => p.status === 'sold' && p.soldTo === user?._id).length
+    : 0;
+
+  // Poll for auction updates to refresh players won count
+  useEffect(() => {
+    if (!auction?._id) return;
+
+    const pollAuctionData = async () => {
+      try {
+        const response = await fetch(`/api/auctions/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.auction) {
+            setAuction(data.auction);
+          }
+        }
+      } catch (err) {
+        console.error('Error polling auction data:', err);
+      }
+    };
+
+    const interval = setInterval(pollAuctionData, 2000); // Poll every 2 seconds
+    return () => clearInterval(interval);
+  }, [auction?._id, id]);
+
+  useEffect(() => {
+    if (prevPlayersWon.current !== playersWon) {
+      setAnimatePlayersWon(true);
+      const timeout = setTimeout(() => setAnimatePlayersWon(false), 600);
+      prevPlayersWon.current = playersWon;
+      return () => clearTimeout(timeout);
+    }
+  }, [playersWon]);
+
   // Function to place a bid
   const placeBid = async () => {
-    if (!auction || !auction.players || !user) return;
+    if (!auction?.players || !user) return;
     setBidError('');
     setBidSuccess('');
     setBidding(true);
     try {
       const currentPlayer = auction.players[currentPlayerIndex];
+      if (!currentPlayer) {
+        setBidError('No player selected');
+        setBidding(false);
+        return;
+      }
       if (!bidAmount || isNaN(parseFloat(bidAmount))) {
         setBidError('Please enter a valid bid amount');
         setBidding(false);
@@ -380,27 +450,47 @@ export default function AuctionPage() {
         body: JSON.stringify(newBid)
       });
       if (!bidResponse.ok) {
-        throw new Error('Failed to place bid');
+        const errorData = await bidResponse.json();
+        throw new Error(errorData.error || 'Failed to place bid');
       }
       if (isBidder()) {
         const newFunds = user.funds - deduction;
+        if (typeof updateFunds !== 'function') {
+          throw new Error('updateFunds function is not available');
+        }
         const updated = await updateFunds(newFunds);
-        if (!updated || !updated.success) {
+        if (!updated) {
           throw new Error('Failed to update funds');
+        }
+        // Immediately fetch updated user data
+        const userResponse = await fetch(`/api/users/${user._id}`);
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData && !userData.error) {
+            setUser(userData);
+          }
         }
         // Update the bidders list to reflect new balance
         const biddersResponse = await fetch(`/api/auctions/${id}/bidders`);
-        const biddersData = await biddersResponse.json();
-        setBidders(biddersData.bidders || []);
+        if (!biddersResponse.ok) {
+          console.error('Failed to update bidders list');
+        } else {
+          const biddersData = await biddersResponse.json();
+          setBidders(biddersData.bidders || []);
+        }
       }
       const updatedBidsResponse = await fetch(`/api/bids?auctionId=${id}`);
-      const updatedBidsData = await updatedBidsResponse.json();
-      setBids(updatedBidsData.bids || []);
+      if (!updatedBidsResponse.ok) {
+        console.error('Failed to update bids list');
+      } else {
+        const updatedBidsData = await updatedBidsResponse.json();
+        setBids(updatedBidsData.bids || []);
+      }
       setBidSuccess(`Successfully placed bid of $${bidAmountNum}`);
       setTimer(15); // Reset timer to 15s after a bid (immediate feedback)
     } catch (err) {
-      setBidError('Failed to place bid');
-      console.error(err);
+      console.error('Error in placeBid:', err);
+      setBidError(err.message || 'Failed to place bid');
     } finally {
       setBidding(false);
     }
@@ -408,21 +498,71 @@ export default function AuctionPage() {
 
   // Function to finalize a player (mark as sold to highest bidder)
   const finalizePlayer = async () => {
-    if (!auction || !auction.players) return;
-    
+    if (!auction?.players) return;
     try {
       const currentPlayer = auction.players[currentPlayerIndex];
-      
+      if (!currentPlayer) {
+        setError('No player selected');
+        console.error('[finalizePlayer] No player selected');
+        return;
+      }
       // Get highest bid for this player
       const highestBidResponse = await fetch(`/api/bids?auctionId=${id}&playerId=${currentPlayer._id}&highest=true`);
       const highestBidData = await highestBidResponse.json();
       const highestBid = highestBidData.bid;
-      
+      console.log('[finalizePlayer] Highest bid:', highestBid);
       if (!highestBid) {
         setError('No bids found for this player');
+        console.error('[finalizePlayer] No bids found for this player');
         return;
       }
-      
+      // Get all bids for this player to process refunds
+      const allBidsResponse = await fetch(`/api/bids?auctionId=${id}&playerId=${currentPlayer._id}`);
+      const allBidsData = await allBidsResponse.json();
+      const allBids = allBidsData.bids || [];
+      console.log('[finalizePlayer] All bids:', allBids);
+      // Refund all losing bidders
+      const losingBidders = Array.from(new Set(
+        allBids.filter(bid => bid.userId !== highestBid.userId).map(bid => bid.userId)
+      ));
+      for (const userId of losingBidders) {
+        const userBids = allBids.filter(bid => bid.userId === userId);
+        if (userBids.length > 0) {
+          const userHighestBid = userBids.sort((a, b) => b.amount - a.amount)[0];
+          try {
+            console.log(`[finalizePlayer] Refunding userId=${userId}, amount=${userHighestBid.amount}`);
+            const refundResponse = await fetch(`/api/users/${userId}/refund`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ amount: userHighestBid.amount })
+            });
+            const refundResult = await refundResponse.json().catch(() => ({}));
+            if (!refundResponse.ok) {
+              console.error(`[finalizePlayer] Failed to refund bidder ${userId}:`, refundResult.error || refundResult);
+            } else {
+              console.log(`[finalizePlayer] Refund success for userId=${userId}:`, refundResult);
+              if (userId === user._id) {
+                // If the current user was refunded, immediately fetch and update their data
+                console.log('[finalizePlayer] Refunded current user, fetching updated user data...');
+                const userResponse = await fetch(`/api/users/${user._id}`);
+                if (userResponse.ok) {
+                  const userData = await userResponse.json();
+                  if (userData && !userData.error) {
+                    console.log('[finalizePlayer] Updated user data after refund:', userData);
+                    setUser(userData);
+                  } else {
+                    console.error('[finalizePlayer] Error in user data after refund:', userData.error || userData);
+                  }
+                } else {
+                  console.error('[finalizePlayer] Failed to fetch updated user data after refund');
+                }
+              }
+            }
+          } catch (err) {
+            console.error(`[finalizePlayer] Exception refunding bidder ${userId}:`, err);
+          }
+        }
+      }
       // Update player status in the auction
       const updatedPlayer = {
         ...currentPlayer,
@@ -431,31 +571,31 @@ export default function AuctionPage() {
         soldToName: highestBid.userName,
         soldAmount: highestBid.amount
       };
-      
       const updatedPlayers = [...auction.players];
       updatedPlayers[currentPlayerIndex] = updatedPlayer;
-      
+      // Update auction in backend
       const response = await fetch(`/api/auctions/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ players: updatedPlayers })
       });
-      
       if (!response.ok) {
+        console.error('[finalizePlayer] Failed to update player status in auction');
         throw new Error('Failed to update player status');
       }
-      
-      // Update local state
-      setAuction({
-        ...auction,
-        players: updatedPlayers
-      });
-      
+      // Fetch latest auction data and update local state
+      const latestAuctionRes = await fetch(`/api/auctions/${id}`);
+      if (latestAuctionRes.ok) {
+        const latestAuctionData = await latestAuctionRes.json();
+        setAuction(latestAuctionData.auction);
+        console.log('[finalizePlayer] Updated auction data:', latestAuctionData.auction);
+      } else {
+        setAuction({ ...auction, players: updatedPlayers });
+        console.warn('[finalizePlayer] Used local auction update fallback');
+      }
       // Add player to buyer's team
       if (user._id === highestBid.userId) {
-        addPlayer({
+        await addPlayer({
           id: currentPlayer._id,
           name: currentPlayer.name,
           price: highestBid.amount,
@@ -463,17 +603,24 @@ export default function AuctionPage() {
           auctionName: auction.name,
           image: currentPlayer.image
         });
+        // Fetch and update user data after addPlayer
+        const userResponse = await fetch(`/api/users/${user._id}`);
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData && !userData.error) {
+            setUser(userData);
+            console.log('[finalizePlayer] Updated user data after addPlayer:', userData);
+          }
+        }
       }
-      
       setBidSuccess(`Player ${currentPlayer.name} sold to ${highestBid.userName} for $${highestBid.amount}`);
-      
       // Move to next player automatically
       if (currentPlayerIndex < auction.players.length - 1) {
-        setTimeout(nextPlayer, 2000);
+        setTimeout(nextPlayer, 500);
       }
     } catch (err) {
       setError('Failed to finalize player');
-      console.error(err);
+      console.error('[finalizePlayer] Error:', err);
     }
   };
   
@@ -609,8 +756,7 @@ export default function AuctionPage() {
 
   // Function to end the auction (creator only)
   const endAuction = async () => {
-    // Check if user is the creator of the auction
-    if (!auction || !user || user._id !== auction.creatorId) {
+    if (!auction?.players || !user || user._id !== auction.creatorId) {
       console.error('Cannot end auction: User is not the creator');
       setError('Only the auction creator can end the auction');
       return;
@@ -718,6 +864,9 @@ export default function AuctionPage() {
     }
   }, [auction, user, isBidder, id, updateFunds, hasSyncedFunds]);
 
+  const maxPlayers = auction?.maxPlayersPerTeam || 0;
+  const canBid = !maxPlayers || playersWon < maxPlayers;
+
   if (loading) {
     return (
       <div>
@@ -731,11 +880,13 @@ export default function AuctionPage() {
   }
 
   if (error) {
+    console.error('[AuctionPage Error Render]', { error, user, role: user?.role, auction });
     return (
       <div>
         <AuthenticatedNavbar />
         <div className="container mx-auto py-24 text-center">
           <p className="text-red-500">{error}</p>
+          <pre className="text-xs text-gray-400 mt-4 text-left max-w-xl mx-auto overflow-x-auto">{JSON.stringify({ error, user, role: user?.role, auction }, null, 2)}</pre>
         </div>
         <Footer />
       </div>
@@ -746,7 +897,7 @@ export default function AuctionPage() {
     return null;
   }
 
-  const currentPlayer = auction.players[currentPlayerIndex];
+  const currentPlayer = auction.players?.[currentPlayerIndex];
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-between">
@@ -767,11 +918,11 @@ export default function AuctionPage() {
           <div className="mb-6 max-w-md mx-auto bg-green-50 border border-green-200 rounded-lg p-4 text-center">
             <div className="mb-2">
               <span className="text-green-800 font-medium">Auction Budget: </span>
-              <span className="text-green-700 font-bold text-xl">${auction.bidderBudget}</span>
+              <span className="text-green-700 font-bold text-xl">${auction?.bidderBudget}</span>
             </div>
             <div>
               <span className="text-green-800 font-medium">Your Balance: </span>
-              <span className="text-green-700 font-bold text-xl">${user.funds}</span>
+              <span className="text-green-700 font-bold text-xl">${user?.funds}</span>
             </div>
           </div>
         )}
@@ -849,9 +1000,9 @@ export default function AuctionPage() {
                   <h2 className="text-xl font-semibold mb-4">Bidders ({bidders.length})</h2>
                   {bidders.length > 0 ? (
                     <div className="space-y-4">
-                      {bidders.map((bidder) => (
+                      {bidders.map((bidder, index) => (
                         <div 
-                          key={bidder._id} 
+                          key={`${bidder._id}-${index}`}
                           className="p-3 rounded-lg bg-gray-50"
                         >
                           <p className="font-medium">{bidder.name}</p>
@@ -911,15 +1062,24 @@ export default function AuctionPage() {
                 </div>
                 {/* Bidding Timer */}
                 <div className="flex justify-center mb-4">
-                  <div className="bg-indigo-100 text-indigo-800 px-6 py-2 rounded-full text-lg font-semibold">
+                  <div className="bg-gray-200 text-gray-800 px-6 py-2 rounded-full text-lg font-semibold">
                     Time left to bid: {timer}s
                   </div>
                 </div>
                 {/* Current Player Card */}
-                <div className="bg-indigo-50 rounded-lg p-6 mb-6">
+                <div className="bg-gray-200 rounded-lg p-6 mb-6">
                   <h2 className="text-xl font-semibold mb-4">Current Player</h2>
                   {auction.players && auction.players[currentPlayerIndex] ? (
                     <div>
+                      {auction.players[currentPlayerIndex].image && (
+                        <div className="flex justify-center mb-4">
+                          <img 
+                            src={auction.players[currentPlayerIndex].image} 
+                            alt={auction.players[currentPlayerIndex].name}
+                            className="w-32 h-32 object-cover rounded-full border-4 border-indigo-200"
+                          />
+                        </div>
+                      )}
                       <h3 className="text-2xl font-bold mb-2">{auction.players[currentPlayerIndex].name}</h3>
                       <p className="text-gray-600 mb-4">{auction.players[currentPlayerIndex].description}</p>
                       <div className="grid grid-cols-2 gap-4 mb-4">
@@ -946,31 +1106,46 @@ export default function AuctionPage() {
                 {isBidder() && user._id !== auction.creatorId && (
                   <div className="bg-white rounded-lg p-6 border border-gray-200">
                     <h3 className="text-lg font-semibold mb-4">Place Your Bid</h3>
-                    {!auctionStarted ? (
+                    {maxPlayers > 0 && (
+                      <div className={`mb-2 text-sm text-gray-700 transition-all duration-500 ${animatePlayersWon ? 'scale-110 text-green-600 font-bold' : ''}`}>
+                        Players won: <span className="font-bold">{playersWon}</span> / {maxPlayers}
+                      </div>
+                    )}
+                    {!canBid ? (
+                      <div className="text-red-500 text-center mb-4">
+                        You have reached the maximum number of players for your team in this auction.
+                      </div>
+                    ) : !auctionStarted ? (
                       <div className="text-center py-4">
                         <p className="text-gray-600">Waiting for auction to start...</p>
                       </div>
                     ) : (
                       <form onSubmit={(e) => { e.preventDefault(); placeBid(); }} className="space-y-4">
-                        <div>
-                          <p className="input-label">Bid Amount ($)</p>
-                          <input
-                            type="number"
-                            id="bidAmount"
-                            value={bidAmount}
-                            onChange={(e) => setBidAmount(e.target.value)}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            min={auction.players[currentPlayerIndex]?.basePrice || auction.baseValue}
-                            step="1"
-                            disabled={timer === 0}
-                          />
-                        </div>
+                        {user && !user.verified ? (
+                          <div className="text-center text-red-500 mb-4">
+                            Please verify your email to place bids.
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="input-label">Bid Amount ($)</p>
+                            <input
+                              type="number"
+                              id="bidAmount"
+                              value={bidAmount}
+                              onChange={(e) => setBidAmount(e.target.value)}
+                              className="input-field"
+                              min={auction.players[currentPlayerIndex]?.basePrice || auction.baseValue}
+                              step="1"
+                              disabled={timer === 0}
+                            />
+                          </div>
+                        )}
                         {bidError && <p className="text-red-500 text-sm">{bidError}</p>}
                         {bidSuccess && <p className="text-green-500 text-sm">{bidSuccess}</p>}
                         <button
                           type="submit"
                           disabled={bidding || timer === 0}
-                          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white primary-btn"
                         >
                           {bidding ? 'Placing Bid...' : 'Place Bid'}
                         </button>
@@ -1014,8 +1189,8 @@ export default function AuctionPage() {
             <div className="col-span-3">
               <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                 <h2 className="text-xl font-semibold mb-4">Auction Code</h2>
-                <div className="bg-indigo-50 p-4 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-indigo-600">{auction.code}</p>
+                <div className="bg-gray-200 p-4 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-gray-800">{auction.code}</p>
                   <p className="text-sm text-gray-500 mt-2">Share this code to invite bidders</p>
                 </div>
               </div>
@@ -1035,6 +1210,16 @@ export default function AuctionPage() {
                   <div>
                     <p className="text-sm text-gray-500">Players Remaining</p>
                     <p className="font-medium">{auction.players?.length - currentPlayerIndex}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-gray-500 mb-0">Max Players Per Team</p>
+                    <span className="font-medium">{auction.maxPlayersPerTeam}</span>
+                    <span className="relative group cursor-pointer">
+                      <svg className="w-4 h-4 text-gray-400 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><circle cx="12" cy="8" r="1"/></svg>
+                      <span className="absolute left-1/2 -translate-x-1/2 mt-2 w-48 bg-black text-white text-xs rounded p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                        Users will be limited to this many players on their team in this auction.
+                      </span>
+                    </span>
                   </div>
                   {isAdmin() && (
                     <div className="pt-4 border-t">

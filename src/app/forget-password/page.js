@@ -11,6 +11,12 @@ export default function ForgetPasswordPage() {
   const [message, setMessage] = useState("");
   const [resetLink, setResetLink] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
+
+  function isValidEmail(email) {
+    // Simple regex for email validation
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,6 +25,10 @@ export default function ForgetPasswordPage() {
     setResetLink("");
     if (!email) {
       setError("Please enter your email address.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError("Please enter a valid email address.");
       return;
     }
     setLoading(true);
@@ -42,6 +52,9 @@ export default function ForgetPasswordPage() {
       setLoading(false);
     }
   };
+
+  // Live email validation
+  const emailError = emailTouched && email && !isValidEmail(email) ? 'Please enter a valid email address.' : '';
 
   return (
     <div className="min-h-screen bg-[#000000] flex flex-col">
@@ -71,16 +84,18 @@ export default function ForgetPasswordPage() {
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => setEmailTouched(true)}
                   className="input-field"
                   placeholder="Enter your email"
                   required
                 />
+                {emailError && <div className="text-red-400 text-xs mt-1">{emailError}</div>}
               </div>
               {error && <p className="text-red-400 text-sm">{error}</p>}
               <button
                 type="submit"
                 className="w-full py-2 px-4 bg-black text-white rounded-lg font-medium shadow hover:bg-grey-700 hover:shadow-lg hover:scale-105 transition-all"
-                disabled={loading}
+                disabled={loading || !!emailError}
               >
                 {loading ? "Sending..." : "Send Reset Link"}
               </button>
