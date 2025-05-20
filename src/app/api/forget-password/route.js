@@ -20,7 +20,7 @@ export async function POST(request) {
       // Save the token to the user (optionally add expiry)
       await updateUser(user._id, { resetToken, resetTokenExpiry: expiry });
       // Send reset email
-      const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+      const resetLink = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
       const html = `
         <h2>Reset your password</h2>
         <p>Click the link below to reset your password:</p>
