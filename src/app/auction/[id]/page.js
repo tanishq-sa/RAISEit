@@ -518,8 +518,40 @@ export default function AuctionPage() {
       const highestBid = highestBidData.bid;
       console.log('[finalizePlayer] Highest bid:', highestBid);
       if (!highestBid) {
-        setError('No bids found for this player');
-        console.error('[finalizePlayer] No bids found for this player');
+        // Mark player as unsold
+        const updatedPlayer = {
+          ...currentPlayer,
+          status: 'unsold',
+          soldTo: null,
+          soldToName: null,
+          soldAmount: null
+        };
+        const updatedPlayers = [...auction.players];
+        updatedPlayers[currentPlayerIndex] = updatedPlayer;
+      
+        // Update auction in backend
+        const response = await fetch(`/api/auctions/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ players: updatedPlayers })
+        });
+        if (!response.ok) {
+          setError('Failed to update player status');
+          return;
+        }
+        // Fetch latest auction data and update local state
+        const latestAuctionRes = await fetch(`/api/auctions/${id}`);
+        if (latestAuctionRes.ok) {
+          const latestAuctionData = await latestAuctionRes.json();
+          setAuction(latestAuctionData.auction);
+        } else {
+          setAuction({ ...auction, players: updatedPlayers });
+        }
+        setBidSuccess(`No bids for ${currentPlayer.name}. Player marked as unsold.`);
+        // Move to next player automatically
+        if (currentPlayerIndex < auction.players.length - 1) {
+          setTimeout(nextPlayer, 2000);
+        }
         return;
       }
       // Get all bids for this player to process refunds
