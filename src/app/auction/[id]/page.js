@@ -1139,12 +1139,12 @@ export default function AuctionPage() {
                 </div>
                 {/* Bidding Timer */}
                 <div className="flex justify-center mb-4">
-                  <div className="bg-indigo-100 text-indigo-800 px-6 py-2 rounded-full text-lg font-semibold">
+                  <div className="bg-gray-200 text-grey-800 px-6 py-2 rounded-full text-lg font-semibold">
                     Time left to bid: {timer}s
                   </div>
                 </div>
                 {/* Current Player Card */}
-                <div className="bg-indigo-50 rounded-lg p-6 mb-6">
+                <div className="bg-gray-100 rounded-lg p-6 mb-6">
                   <h2 className="text-xl font-semibold mb-4">Current Player</h2>
                   {auction.players && auction.players[currentPlayerIndex] ? (
                     <div>
@@ -1266,9 +1266,9 @@ export default function AuctionPage() {
             <div className="col-span-3">
               <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                 <h2 className="text-xl font-semibold mb-4">Auction Code</h2>
-                <div className="bg-indigo-50 p-4 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-indigo-600">{auction.code}</p>
-                  <p className="text-sm text-gray-500 mt-2">Share this code to invite bidders</p>
+                <div className="bg-gray-900 p-4 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-white">{auction.code}</p>
+                  <p className="text-sm text-gray-200 mt-2">Share this code to invite bidders</p>
                 </div>
               </div>
 
