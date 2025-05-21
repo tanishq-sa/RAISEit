@@ -1255,7 +1255,7 @@ export default function AuctionPage() {
                           <p className="font-medium">{bid.userName}</p>
                           <p className="text-sm text-gray-500">{new Date(bid.timestamp).toLocaleString()}</p>
                         </div>
-                        <p className="font-semibold text-indigo-600">${bid.amount}</p>
+                        <p className="font-semibold text-black">${bid.amount}</p>
                       </div>
                     ))}
                 </div>
