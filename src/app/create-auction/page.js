@@ -126,7 +126,7 @@ export default function CreateAuction() {
       <AuthenticatedNavbar />
       
       <div className="container mx-auto py-12 px-4">
-        <h1 className="text-3xl font-bold mb-8">Create an Auction</h1>
+        <h1 className="text-3xl font-bold mb-8 text-center">Create an Auction</h1>
         
         {success ? (
           <div className="max-w-2xl mx-auto">

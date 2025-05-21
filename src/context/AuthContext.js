@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
         
-        // Optionally refresh user data from the server
+        // Optionally refresh user data is needed from the server
         if (parsedUser && parsedUser._id) {
           fetch(`/api/users/${parsedUser._id}`)
             .then(res => res.json())
