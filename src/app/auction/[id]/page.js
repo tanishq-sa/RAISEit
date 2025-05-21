@@ -1222,7 +1222,7 @@ export default function AuctionPage() {
                         <button
                           type="submit"
                           disabled={bidding || timer === 0}
-                          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium primary-button"
+                          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium  bg-black text-white primary-button"
                         >
                           {bidding ? 'Placing Bid...' : 'Place Bid'}
                         </button>
