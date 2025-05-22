@@ -15,6 +15,8 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [retypePasswordTouched, setRetypePasswordTouched] = useState(false);
   const router = useRouter();
   const { signup, isAuthenticated } = useAuth();
 
@@ -30,17 +32,58 @@ export default function Signup() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
+  // Password strength validation
+  const validatePassword = (pass) => {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(pass);
+    const hasLowerCase = /[a-z]/.test(pass);
+    const hasNumbers = /\d/.test(pass);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
+    
+    const errors = [];
+    if (pass.length < minLength) errors.push(`At least ${minLength} characters`);
+    if (!hasUpperCase) errors.push('At least one uppercase letter');
+    if (!hasLowerCase) errors.push('At least one lowercase letter');
+    if (!hasNumbers) errors.push('At least one number');
+    if (!hasSpecialChar) errors.push('At least one special character');
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  };
+
   // Live email validation
   const emailError = emailTouched && email && !isValidEmail(email) ? 'Please enter a valid email address!' : '';
+
+  // Live password validation
+  const passwordValidation = passwordTouched ? validatePassword(password) : { isValid: true, errors: [] };
+  const passwordError = passwordTouched && !passwordValidation.isValid 
+    ? 'Password must meet all requirements.' 
+    : '';
+
+  // Live confirm password validation
+  const confirmPasswordError = retypePasswordTouched && password !== retypePassword 
+    ? 'Passwords do not match.' 
+    : '';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
     // Validate email format
     if (!isValidEmail(email)) {
       setError('Please enter a valid email address!');
       return;
     }
+
+    // Validate password strength
+    const passwordCheck = validatePassword(password);
+    if (!passwordCheck.isValid) {
+      setError('Password does not meet the requirements.');
+      return;
+    }
+
     // Validate passwords match
     if (password !== retypePassword) {
       setError('Passwords do not match!');
@@ -116,8 +159,22 @@ export default function Signup() {
                 placeholder="Create a password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => setPasswordTouched(true)}
                 required
               />
+              {passwordTouched && !passwordValidation.isValid && (
+                <div className="mt-2">
+                  <div className="text-xs text-[#9ca3af] mb-1">Password must contain:</div>
+                  <ul className="text-xs text-[#9ca3af] list-disc list-inside">
+                    {passwordValidation.errors.map((error, index) => (
+                      <li key={index} className={password.includes(error) ? 'text-green-400' : 'text-[#ef4444]'}>
+                        {error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {passwordError && <div className="text-[#ef4444] text-xs mt-1">{passwordError}</div>}
             </div>
             
             <div className="mb-6">
@@ -131,8 +188,10 @@ export default function Signup() {
                 placeholder="Retype your password"
                 value={retypePassword}
                 onChange={(e) => setRetypePassword(e.target.value)}
+                onBlur={() => setRetypePasswordTouched(true)}
                 required
               />
+              {confirmPasswordError && <div className="text-[#ef4444] text-xs mt-1">{confirmPasswordError}</div>}
             </div>
             
             {error && (
@@ -142,7 +201,7 @@ export default function Signup() {
             <button
               type="submit"
               className="w-full py-2 px-4 bg-black text-white rounded-lg font-medium shadow hover:bg-grey-700 hover:shadow-lg hover:scale-105 transition-all"
-              disabled={loading || !!emailError}
+              disabled={loading || !!emailError || !!passwordError || !!confirmPasswordError}
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>

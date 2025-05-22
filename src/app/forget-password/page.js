@@ -57,11 +57,11 @@ export default function ForgetPasswordPage() {
   const emailError = emailTouched && email && !isValidEmail(email) ? 'Please enter a valid email address.' : '';
 
   return (
-    <div className="min-h-screen bg-[#000000] flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-between">
       <AuthenticatedNavbar />
       <main className="flex-1 flex items-center justify-center">
-        <div className="bg-[#1E1E1E] rounded-xl shadow-lg p-8 w-full max-w-md border border-[#222]">
-          <h1 className="text-2xl font-bold mb-6 text-center text-[#fff]">Forgot Password?</h1>
+        <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md border border-gray-200">
+          <h1 className="text-2xl font-bold mb-6 text-center text-gray-900">Forgot Password?</h1>
           {submitted ? (
             <div className="text-green-400 text-center">
               {message}
